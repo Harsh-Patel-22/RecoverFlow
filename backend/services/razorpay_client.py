@@ -1,6 +1,7 @@
 import asyncio
 import hmac
 import hashlib
+import urllib.parse
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
@@ -14,6 +15,7 @@ class RazorpayClient:
         self.key_id = settings.RAZORPAY_KEY_ID
         self.key_secret = settings.RAZORPAY_KEY_SECRET
         self.client = None
+        self.amount_link_cache: Dict[int, str] = {}
         if self.key_id and self.key_secret and not self.key_id.startswith("rzp_test_mock"):
             try:
                 self.client = razorpay.Client(auth=(self.key_id, self.key_secret))
@@ -30,6 +32,12 @@ class RazorpayClient:
         subscription_id: str,
         allowed_payment_methods: Optional[List[str]] = None
     ) -> str:
+        amt_key = int(amount_rupees)
+
+        # Check if we already have a cached live Razorpay link for this exact amount
+        if amt_key in self.amount_link_cache:
+            return self.amount_link_cache[amt_key]
+
         clean_phone = customer_phone.replace("+91", "").strip()
         expire_time = int((datetime.now(timezone.utc) + timedelta(days=5)).timestamp())
 
@@ -54,10 +62,10 @@ class RazorpayClient:
 
         if allowed_payment_methods is not None:
             # Configure allowed options (e.g. excluding UPI for HARD_UPI_CAP_EXCEEDED)
-            methods_config = {m: 1 for m in allowed_payment_methods}
+            methods_config = {m: True for m in allowed_payment_methods}
             if "upi" not in allowed_payment_methods:
-                methods_config["upi"] = 0
-            payload["options"] = {"order": {"payment": {"method": methods_config}}}
+                methods_config["upi"] = False
+            payload["options"] = {"checkout": {"method": methods_config}}
 
         if self.client is not None:
             try:
@@ -66,13 +74,16 @@ class RazorpayClient:
 
                 res = await asyncio.to_thread(_call_rzp)
                 if isinstance(res, dict) and "short_url" in res:
-                    return res["short_url"]
+                    url = res["short_url"]
+                    self.amount_link_cache[amt_key] = url
+                    return url
             except Exception as e:
                 logger.error(f"Razorpay API call failed: {e}")
 
-        # Fallback short_url for test/demo mode when SDK key is placeholder or API call fails
-        sub_hash = hashlib.md5(subscription_id.encode()).hexdigest()[:8]
-        return f"https://rzp.io/i/{sub_hash}"
+        # Dynamic hosted checkout fallback for test/demo mode when SDK key is rate-limited or placeholder
+        encoded_cust = urllib.parse.quote(customer_name)
+        encoded_plan = urllib.parse.quote(description)
+        return f"{settings.BACKEND_URL}/checkout?amt={int(amount_rupees)}&customer={encoded_cust}&plan={encoded_plan}&sub={subscription_id}"
 
     async def create_subscription(
         self,

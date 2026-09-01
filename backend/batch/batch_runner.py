@@ -29,11 +29,12 @@ class BatchRunner:
         start_time = time.time()
         raw_records = synthetic_generator.generate_batch(count=count)
 
-        semaphore = asyncio.Semaphore(5)
+        semaphore = asyncio.Semaphore(2)
         agent_results = []
 
         async def _process_single(rec: Dict[str, Any]):
             async with semaphore:
+                await asyncio.sleep(0.05)
                 async with AsyncSessionLocal() as session:
                     failure = SubscriptionFailure(**rec)
                     session.add(failure)
