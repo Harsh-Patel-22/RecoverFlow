@@ -6,6 +6,8 @@ from models.recovery_action import RecoveryAction
 from models.subscription_failure import SubscriptionFailure
 from services.audit_logger import audit_logger
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
 class NotificationEngine:
@@ -15,7 +17,11 @@ class NotificationEngine:
         recovery_action: RecoveryAction,
         failure: SubscriptionFailure
     ) -> Tuple[Optional[str], Optional[str]]:
-        phone = (failure.customer_phone or "").replace("+91", "").strip()
+        raw_phone = (failure.customer_phone or "").replace("+91", "").strip()
+        target_phone = settings.DEMO_PHONE_NUMBER.strip() if settings.DEMO_PHONE_NUMBER else f"91{raw_phone}"
+        if target_phone and not target_phone.startswith("91") and len(target_phone) == 10:
+            target_phone = f"91{target_phone}"
+
         email = failure.customer_email
         payment_link = recovery_action.razorpay_payment_link
 
@@ -24,7 +30,7 @@ class NotificationEngine:
         # Build WhatsApp deep link if channel is WHATSAPP or BOTH and message body exists
         if recovery_action.recovery_channel in ["WHATSAPP", "BOTH"] and recovery_action.message_body:
             encoded_msg = urllib.parse.quote(recovery_action.message_body, safe='')
-            whatsapp_link = f"https://wa.me/91{phone}?text={encoded_msg}"
+            whatsapp_link = f"https://wa.me/{target_phone}?text={encoded_msg}"
             recovery_action.whatsapp_deep_link = whatsapp_link
 
         # Handle Mock Email printing if channel is EMAIL or BOTH
