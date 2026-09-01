@@ -1,11 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, ExternalLink, Clock } from "lucide-react";
+import { MessageSquare, ExternalLink, Clock, Copy, Check } from "lucide-react";
 import { FailingSubscriptionItem } from "@/lib/types";
+import { useState } from "react";
 
 export default function RecoveryTable({ items }: { items: FailingSubscriptionItem[] }) {
   const displayItems = items.slice(0, 20);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyLink = (id: string, link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const getFormattedWhatsAppLink = (link: string | null) => {
+    if (!link) return null;
+    const demoPhone = process.env.NEXT_PUBLIC_DEMO_PHONE_NUMBER || "919104069628";
+    if (demoPhone && demoPhone.trim()) {
+      let cleanPhone = demoPhone.trim().replace("+", "");
+      if (cleanPhone.length === 10) cleanPhone = `91${cleanPhone}`;
+      return link.replace(/wa\.me\/\d+/, `wa.me/${cleanPhone}`);
+    }
+    return link;
+  };
+
+  const getFormattedPaymentLink = (link: string | null, failure?: any) => {
+    if (link && link.includes("/checkout")) {
+      return link;
+    }
+    const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+    const amt = failure?.plan_amount || 500;
+    const name = encodeURIComponent(failure?.customer_name || "Customer");
+    const plan = encodeURIComponent(failure?.plan_name || "Subscription Renewal");
+    const sub = failure?.subscription_id || "sub_demo";
+    return `${backendUrl}/checkout?amt=${amt}&customer=${name}&plan=${plan}&sub=${sub}`;
+  };
 
   const formatIST = (dateStr: string) => {
     if (!dateStr) return "-";
@@ -61,13 +92,13 @@ export default function RecoveryTable({ items }: { items: FailingSubscriptionIte
       <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-900 tracking-tight">Failing Subscriptions Queue</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Live Razorpay subscription failure events queued for AI recovery</p>
+          <p className="text-xs text-slate-500 mt-0.5">Live Razorpay subscription failure events queued for AI agent recovery</p>
         </div>
         <Link
           href="/audit"
           className="text-xs font-bold text-[#0066FF] hover:text-[#0052CC] flex items-center gap-1 transition-colors self-start sm:self-auto"
         >
-          <span>View Audit Trail</span>
+          <span>View Full Audit Trail</span>
           <ExternalLink className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -81,8 +112,8 @@ export default function RecoveryTable({ items }: { items: FailingSubscriptionIte
               <th className="py-3 px-4">Amount</th>
               <th className="py-3 px-4">Failure Class</th>
               <th className="py-3 px-4">Channel</th>
-              <th className="py-3 px-4">WhatsApp Link</th>
-              <th className="py-3 px-4">Payment Link</th>
+              <th className="py-3 px-4">WhatsApp Recovery Action</th>
+              <th className="py-3 px-4">Razorpay Payment Link</th>
               <th className="py-3 px-4">Status</th>
               <th className="py-3 px-4">Timestamp (IST)</th>
             </tr>
@@ -125,35 +156,55 @@ export default function RecoveryTable({ items }: { items: FailingSubscriptionIte
                     </span>
                   </td>
 
-                  {/* WhatsApp Link */}
+                  {/* WhatsApp Action */}
                   <td className="py-3 px-4">
                     {recovery_action?.whatsapp_deep_link ? (
                       <a
-                        href={recovery_action.whatsapp_deep_link}
+                        href={getFormattedWhatsAppLink(recovery_action.whatsapp_deep_link) || "#"}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20BD5A] text-white text-xs font-bold shadow-sm transition-all"
+                        title="Send pre-filled Hinglish recovery notice directly to customer via WhatsApp"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Open WhatsApp</span>
+                        <span>Send WhatsApp Notice</span>
                       </a>
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}
                   </td>
 
-                  {/* Payment Link */}
+                  {/* Payment Link (Merchant Actions: Copy Link & Open Link) */}
                   <td className="py-3 px-4">
                     {recovery_action?.razorpay_payment_link ? (
-                      <a
-                        href={recovery_action.razorpay_payment_link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0066FF] hover:bg-[#0052CC] text-white text-xs font-bold shadow-sm transition-all"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Pay Now</span>
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleCopyLink(failure.id, getFormattedPaymentLink(recovery_action.razorpay_payment_link, failure))}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-300 transition-all"
+                          title="Copy Razorpay payment link to clipboard to send via chat/email"
+                        >
+                          {copiedId === failure.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-700">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Copy Link</span>
+                            </>
+                          )}
+                        </button>
+                        <a
+                          href={getFormattedPaymentLink(recovery_action.razorpay_payment_link, failure)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all"
+                          title="Preview Razorpay Checkout Page in new tab"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-slate-400">-</span>
                     )}

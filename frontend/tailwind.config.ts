@@ -9,19 +9,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        rzp: {
+        blade: {
           navy: "#07162C",
-          dark: "#02042B",
+          darkNavy: "#02042B",
           blue: "#0066FF",
           blueHover: "#0052CC",
           lightBlue: "#EBF3FF",
           bg: "#F8FAFC",
           card: "#FFFFFF",
           border: "#E2E8F0",
-          subtle: "#64748B",
-          text: "#0F172A",
-          testMode: "#F59E0B",
+          subtleText: "#64748B",
+          heading: "#0F172A",
+          whatsapp: "#25D366",
+          whatsappHover: "#20BD5A",
         },
+      },
+      boxShadow: {
+        blade: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)",
+        bladeHover: "0 4px 12px -2px rgba(0, 102, 255, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.05)",
       },
     },
   },
