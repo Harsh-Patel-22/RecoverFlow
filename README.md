@@ -118,8 +118,11 @@ RecoverFlow intentionally uses **Claude `claude-sonnet-4-6`** *only* when determ
 
 - **Razorpay Sandbox Limitation**: Razorpay's test-mode subscription failure webhooks return binary success/failure flags rather than full production error codes (e.g. `upi_limit_exceeded` or `mandate_cancelled`).
   - *Solution*: Developed a synthetic batch generator mirroring real production Razorpay JSON payloads across all 8 failure classes while executing actual test-mode payment link generation via the Razorpay SDK.
+- **Razorpay Test Mode Payment Link API Cap (30 Links Limit)**:
+  - *Challenge*: During high-throughput batch testing (100 synthetic failures), Razorpay's Test Mode API enforced a strict sandbox quota limit (`BAD_REQUEST_ERROR: test mode limit of 30 reached for payment_link`), which initially caused API rate-limit errors and static link fallbacks.
+  - *Engineering Growth & Solution*: Rather than compromising the live demo experience, we implemented a zero-quota, dynamic hosted checkout handler (`GET /checkout`) powered by official Razorpay Checkout JS (`checkout.js`). This handler dynamically encodes the customer's name, plan description, and exact plan amount (from ₹199 to ₹25,000) down to the rupee. Additionally, we introduced `asyncio.Semaphore(2)` concurrency throttling in the batch orchestrator to respect API quotas while maintaining 100% checkout availability across Sandbox and Production modes.
 - **LLM Concurrency & Rate Limit Management**: Executing 100 parallel LLM calls during batch simulations risks API rate limits.
-  - *Solution*: Implemented an `asyncio.Semaphore(5)` lock inside the batch runner to bound concurrent LLM calls while keeping throughput high.
+  - *Solution*: Implemented an `asyncio.Semaphore(2)` lock inside the batch runner to bound concurrent LLM calls while keeping throughput high.
 - **UPI AutoPay ₹15,000 RBI Cap Handling**: High-value subscription plans (> ₹15,000) failed repeatedly if customers attempted payment via UPI deep links.
   - *Solution*: Built dynamic method filtering in `razorpay_client.py` to strip UPI from generated Razorpay payment link options for high-ticket plans, directing customers to Card or NetBanking.
 
