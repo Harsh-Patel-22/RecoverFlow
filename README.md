@@ -23,6 +23,15 @@ By pairing deterministic business rules for clear error codes with **Claude `cla
 
 ---
 
+## Key Enterprise Features (v2.0 Upgrade)
+
+- **⚡ Webhook Sandbox Drawer ("Simulate 1 Event")**: Test isolated real-time failure scenarios (`HARD_EXPIRED_CARD`, `HARD_UPI_CAP_EXCEEDED`, etc.) in 1 click and observe real-time intake in < 200ms.
+- **⚙️ Campaign & Dunning Settings**: Customize recovery messaging tone (*Hinglish Conversational* vs *Formal English B2B*) and toggle 1-click dynamic **Discount Incentives** (*0%, 5%, 10%, 15% OFF*) automatically appended to checkout links.
+- **⭐️ VIP Account Routing & CSM Escalation**: High-value contracts ($\ge$ ₹20,000) or ambiguous declines are flagged with a **`★ VIP`** badge and an interactive **"Assign to CSM"** button for direct manual outreach.
+- **🌊 Omnichannel Escalation Waterfall**: Visual step-by-step timeline visualizer showing the exact escalation schedule (*T+0h WhatsApp → T+24h Email → Salary Day Auto-Debit Retry*).
+
+---
+
 ## Architecture
 
 ```
