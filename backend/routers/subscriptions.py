@@ -57,3 +57,26 @@ async def get_subscription_failure(failure_id: str, db: AsyncSession = Depends(g
         "failure": SubscriptionFailureResponse.model_validate(fail),
         "recovery_action": RecoveryActionResponse.model_validate(act) if act else None
     }
+
+@router.post("/{failure_id}/assign-csm")
+async def assign_csm_to_failure(failure_id: str, db: AsyncSession = Depends(get_db)):
+    stmt = select(RecoveryAction).where(RecoveryAction.failure_id == failure_id)
+    res = await db.execute(stmt)
+    act = res.scalar_one_or_none()
+    if not act:
+        raise HTTPException(status_code=404, detail="Recovery action record not found")
+
+    act.csm_status = "CSM_ASSIGNED"
+    act.is_vip = True
+
+    audit = AuditLog(
+        failure_id=failure_id,
+        event_type="CSM_ASSIGNED",
+        actor="MERCHANT_USER",
+        description="Assigned high-value account to Senior CSM for direct manual outreach",
+        metadata_json={"csm_status": "CSM_ASSIGNED"}
+    )
+    db.add(audit)
+    await db.commit()
+    await db.refresh(act)
+    return {"status": "success", "csm_status": act.csm_status}

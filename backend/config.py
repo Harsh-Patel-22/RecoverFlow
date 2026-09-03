@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str
     ANTHROPIC_API_KEY: str = ""
     DEMO_PHONE_NUMBER: str = ""
+    DEFAULT_CAMPAIGN_TONE: str = "HINGLISH"
+    DEFAULT_DISCOUNT_PERCENT: int = 10
     DATABASE_URL: str = "sqlite+aiosqlite:///./recoverflow.db"
     BACKEND_URL: str = "http://localhost:8000"
 

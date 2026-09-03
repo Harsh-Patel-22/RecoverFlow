@@ -55,6 +55,16 @@ class RecoveryOrchestrator:
                 mrr_impact=0.0
             )
 
+        from config import settings
+
+        tone = settings.DEFAULT_CAMPAIGN_TONE
+        discount = settings.DEFAULT_DISCOUNT_PERCENT
+        is_vip = failure.plan_amount >= 20000.0 or f_class in ["HARD_FRAUD_FLAGGED", "AMBIGUOUS"]
+        csm_status = "MANUAL_CALL_REQUIRED" if is_vip else "AUTOMATED"
+
+        # Apply Tone & Discount formatting
+        discount_text = f"\n🎁 Special Offer: Complete payment within 24h to get {discount}% off your next renewal!" if discount > 0 else ""
+
         # Default properties based on failure class
         if f_class == "SOFT_INSUFFICIENT_FUNDS":
             retry_at = compute_salary_day_retry(base_time)
@@ -63,9 +73,13 @@ class RecoveryOrchestrator:
             action_type = "SCHEDULE_RETRY"
             channel = "WHATSAPP"
             subject = None
-            msg = (f"Hii {failure.customer_name}! 😊 Aapki {failure.plan_name} subscription ka ₹{failure.plan_amount:.0f} "
-                   f"renewal pending hai. Account mein balance add karke is link se payment complete karein: {payment_link}. "
-                   f"Koi problem ho toh reply karein! 🙏")
+            if tone == "FORMAL_ENGLISH":
+                msg = (f"Dear {failure.customer_name}, your payment for {failure.plan_name} (₹{failure.plan_amount:.0f}) "
+                       f"could not be completed due to insufficient funds. Please complete your payment here: {payment_link}.{discount_text}")
+            else:
+                msg = (f"Hii {failure.customer_name}! 😊 Aapki {failure.plan_name} subscription ka ₹{failure.plan_amount:.0f} "
+                       f"renewal pending hai. Account mein balance add karke is link se payment complete karein: {payment_link}.{discount_text} "
+                       f"Koi problem ho toh reply karein! 🙏")
 
         elif f_class == "SOFT_BANK_BLOCKED":
             retry_at = base_time + timedelta(hours=24)
@@ -74,8 +88,12 @@ class RecoveryOrchestrator:
             action_type = "SCHEDULE_RETRY"
             channel = "WHATSAPP"
             subject = None
-            msg = (f"Hi {failure.customer_name}, aapke bank ne temporarily {failure.plan_name} ka payment block kiya hai. "
-                   f"Hum kal dobara try karenge. Agar aap khud pay karna chahte hain: {payment_link}")
+            if tone == "FORMAL_ENGLISH":
+                msg = (f"Dear {failure.customer_name}, your bank temporarily declined the transaction for {failure.plan_name}. "
+                       f"We will retry automatically tomorrow. To pay now: {payment_link}.{discount_text}")
+            else:
+                msg = (f"Hi {failure.customer_name}, aapke bank ne temporarily {failure.plan_name} ka payment block kiya hai. "
+                       f"Hum kal dobara try karenge. Agar aap khud pay karna chahte hain: {payment_link}.{discount_text}")
 
         elif f_class == "SOFT_NETWORK":
             retry_at = base_time + timedelta(hours=4)
@@ -93,8 +111,12 @@ class RecoveryOrchestrator:
             action_type = "SEND_WHATSAPP"
             channel = "BOTH"
             card_update_link = f"{payment_link}#update-card"
-            msg = (f"Hi {failure.customer_name}! Aapka {failure.plan_name} subscription renew nahi hua kyunki card expire ho gaya hai. "
-                   f"Naya card add karein: {card_update_link}\nYa is link se directly pay karein: {payment_link} 🙏")
+            if tone == "FORMAL_ENGLISH":
+                msg = (f"Dear {failure.customer_name}, your card for {failure.plan_name} has expired. "
+                       f"Update card: {card_update_link}\nOr pay directly: {payment_link}.{discount_text}")
+            else:
+                msg = (f"Hi {failure.customer_name}! Aapka {failure.plan_name} subscription renew nahi hua kyunki card expire ho gaya hai. "
+                       f"Naya card add karein: {card_update_link}\nYa is link se directly pay karein: {payment_link}.{discount_text} 🙏")
             subject = f"Action Required: Update your card for {failure.plan_name}"
 
         elif f_class == "HARD_MANDATE_CANCELLED":
@@ -103,8 +125,12 @@ class RecoveryOrchestrator:
             deadline = base_time + timedelta(days=3)
             action_type = "SEND_WHATSAPP"
             channel = "BOTH"
-            msg = (f"Hi {failure.customer_name}, aapka {failure.plan_name} auto-pay mandate cancel ho gaya hai. "
-                   f"Service continue rakhne ke liye dobara authorize karein ya is link se pay karein: {payment_link}")
+            if tone == "FORMAL_ENGLISH":
+                msg = (f"Dear {failure.customer_name}, your auto-pay mandate for {failure.plan_name} was cancelled. "
+                       f"Re-authorize or pay here: {payment_link}.{discount_text}")
+            else:
+                msg = (f"Hi {failure.customer_name}, aapka {failure.plan_name} auto-pay mandate cancel ho gaya hai. "
+                       f"Service continue rakhne ke liye dobara authorize karein ya is link se pay karein: {payment_link}.{discount_text}")
             subject = f"Action Required: Re-authorize your subscription for {failure.plan_name}"
 
         elif f_class == "HARD_UPI_CAP_EXCEEDED":
@@ -113,8 +139,12 @@ class RecoveryOrchestrator:
             deadline = base_time + timedelta(days=2)
             action_type = "SEND_WHATSAPP"
             channel = "WHATSAPP"
-            msg = (f"Hi {failure.customer_name}! ₹{failure.plan_amount:.0f} ki payment UPI se nahi ho sakti "
-                   f"(RBI limit ₹15,000 hai). Card ya NetBanking se pay karein: {payment_link} ✅")
+            if tone == "FORMAL_ENGLISH":
+                msg = (f"Dear {failure.customer_name}, your payment of ₹{failure.plan_amount:.0f} exceeds the RBI UPI AutoPay limit (₹15,000). "
+                       f"Please pay via Credit Card or NetBanking: {payment_link}.{discount_text}")
+            else:
+                msg = (f"Hi {failure.customer_name}! ₹{failure.plan_amount:.0f} ki payment UPI se nahi ho sakti "
+                       f"(RBI limit ₹15,000 hai). Card ya NetBanking se pay karein: {payment_link}.{discount_text} ✅")
             subject = None
 
         elif f_class == "HARD_FRAUD_FLAGGED":
@@ -155,5 +185,8 @@ class RecoveryOrchestrator:
             stopping_rule_deadline=deadline,
             status="PENDING",
             outcome=None,
-            mrr_impact=failure.plan_amount if f_class.startswith("SOFT_") else 0.0
+            mrr_impact=failure.plan_amount if f_class.startswith("SOFT_") else 0.0,
+            is_vip=is_vip,
+            discount_applied_percent=discount,
+            csm_status=csm_status
         )

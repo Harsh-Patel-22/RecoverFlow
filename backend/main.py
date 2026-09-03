@@ -183,11 +183,14 @@ async def razorpay_checkout_page(amt: float, customer: str = "Customer", plan: s
 </html>"""
     return HTMLResponse(content=html_content)
 
+from routers import webhooks_router, batch_router, subscriptions_router, metrics_router, settings_router
+
 # Include Routers
 app.include_router(webhooks_router)
 app.include_router(batch_router)
 app.include_router(subscriptions_router)
 app.include_router(metrics_router)
+app.include_router(settings_router)
 
 if __name__ == "__main__":
     import uvicorn

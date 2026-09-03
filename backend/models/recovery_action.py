@@ -30,5 +30,8 @@ class RecoveryAction(Base):
     status = Column(String, default="PENDING", nullable=False)
     outcome = Column(String, nullable=True)
     mrr_impact = Column(Float, default=0.0, nullable=False)
+    is_vip = Column(Boolean, default=False, nullable=False)
+    discount_applied_percent = Column(Integer, default=0, nullable=False)
+    csm_status = Column(String, default="AUTOMATED", nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)

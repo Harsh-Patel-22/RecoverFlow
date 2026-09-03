@@ -33,6 +33,9 @@ class RecoveryActionResponse(BaseModel):
     status: str
     outcome: Optional[str] = None
     mrr_impact: float
+    is_vip: bool = False
+    discount_applied_percent: int = 0
+    csm_status: str = "AUTOMATED"
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
