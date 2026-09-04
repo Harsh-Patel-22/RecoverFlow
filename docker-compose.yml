@@ -1,16 +1,27 @@
 version: "3.9"
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: recoverflow_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./backend:/app
-      - ./recoverflow.db:/app/recoverflow.db
+      - ./:/app/data
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - redis
 
   frontend:
     build: ./frontend
