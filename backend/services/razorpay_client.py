@@ -67,7 +67,7 @@ class RazorpayClient:
                 methods_config["upi"] = False
             payload["options"] = {"checkout": {"method": methods_config}}
 
-        if self.client is not None:
+        if self.client is not None and not settings.USE_LOCAL_CHECKOUT:
             # Check if rate-limited recently (cool down for 60 seconds to avoid flooding API & logs)
             now_ts = datetime.now(timezone.utc).timestamp()
             if hasattr(self, "_rate_limited_until") and now_ts < self._rate_limited_until:

@@ -64,7 +64,8 @@ class RecoveryOrchestrator:
 
         # Apply Tone & Discount formatting
         discount_text = f"\n🎁 Special Offer: Complete payment within 24h to get {discount}% off your next renewal!" if discount > 0 else ""
-        portal_link = f"http://localhost:3000/portal/{failure.subscription_id}"
+        frontend_base = settings.FRONTEND_URL.rstrip("/")
+        portal_link = f"{frontend_base}/portal/{failure.subscription_id}"
 
         # Default properties based on failure class
         if f_class == "SOFT_INSUFFICIENT_FUNDS":

@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     DEFAULT_DISCOUNT_PERCENT: int = 10
     DATABASE_URL: str = "sqlite+aiosqlite:///./recoverflow.db"
     BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:3000"
+    USE_LOCAL_CHECKOUT: bool = False
 
     class Config:
         env_file = ".env"
