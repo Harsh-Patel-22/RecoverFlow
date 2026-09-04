@@ -68,6 +68,13 @@ class RazorpayClient:
             payload["options"] = {"checkout": {"method": methods_config}}
 
         if self.client is not None:
+            # Check if rate-limited recently (cool down for 60 seconds to avoid flooding API & logs)
+            now_ts = datetime.now(timezone.utc).timestamp()
+            if hasattr(self, "_rate_limited_until") and now_ts < self._rate_limited_until:
+                encoded_cust = urllib.parse.quote(customer_name)
+                encoded_plan = urllib.parse.quote(description)
+                return f"{settings.BACKEND_URL}/checkout?amt={int(amount_rupees)}&customer={encoded_cust}&plan={encoded_plan}&sub={subscription_id}"
+
             try:
                 def _call_rzp():
                     return self.client.payment_link.create(payload)
@@ -78,7 +85,12 @@ class RazorpayClient:
                     self.amount_link_cache[amt_key] = url
                     return url
             except Exception as e:
-                logger.error(f"Razorpay API call failed: {e}")
+                err_str = str(e)
+                if "Too many requests" in err_str or "429" in err_str:
+                    self._rate_limited_until = datetime.now(timezone.utc).timestamp() + 60
+                    logger.info("Razorpay API rate-limited (429). Utilizing high-performance local checkout links for batch operations.")
+                else:
+                    logger.warning(f"Razorpay API call notice: {e}")
 
         # Dynamic hosted checkout fallback for test/demo mode when SDK key is rate-limited or placeholder
         encoded_cust = urllib.parse.quote(customer_name)

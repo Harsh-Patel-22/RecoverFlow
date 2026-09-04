@@ -64,6 +64,7 @@ class RecoveryOrchestrator:
 
         # Apply Tone & Discount formatting
         discount_text = f"\n🎁 Special Offer: Complete payment within 24h to get {discount}% off your next renewal!" if discount > 0 else ""
+        portal_link = f"http://localhost:3000/portal/{failure.subscription_id}"
 
         # Default properties based on failure class
         if f_class == "SOFT_INSUFFICIENT_FUNDS":
@@ -107,30 +108,29 @@ class RecoveryOrchestrator:
         elif f_class == "HARD_EXPIRED_CARD":
             retry_at = None
             max_attempts = 0
-            deadline = base_time + timedelta(days=5)
-            action_type = "SEND_WHATSAPP"
+            deadline = base_time + timedelta(days=3)
+            action_type = "SEND_EMAIL"
             channel = "BOTH"
-            card_update_link = f"{payment_link}#update-card"
             if tone == "FORMAL_ENGLISH":
-                msg = (f"Dear {failure.customer_name}, your card for {failure.plan_name} has expired. "
-                       f"Update card: {card_update_link}\nOr pay directly: {payment_link}.{discount_text}")
+                msg = (f"Dear {failure.customer_name}, your credit card for {failure.plan_name} has expired. "
+                       f"Update card & pay: {payment_link}#update-card. Customer Portal: {portal_link}.{discount_text}")
             else:
-                msg = (f"Hi {failure.customer_name}! Aapka {failure.plan_name} subscription renew nahi hua kyunki card expire ho gaya hai. "
-                       f"Naya card add karein: {card_update_link}\nYa is link se directly pay karein: {payment_link}.{discount_text} 🙏")
+                msg = (f"Hi {failure.customer_name}! Aapka {failure.plan_name} card expire ho gaya hai. "
+                       f"Card update karein: {payment_link}#update-card. Sub portal: {portal_link}.{discount_text}")
             subject = f"Action Required: Update your card for {failure.plan_name}"
 
         elif f_class == "HARD_MANDATE_CANCELLED":
             retry_at = None
             max_attempts = 0
-            deadline = base_time + timedelta(days=3)
+            deadline = base_time + timedelta(days=5)
             action_type = "SEND_WHATSAPP"
             channel = "BOTH"
             if tone == "FORMAL_ENGLISH":
-                msg = (f"Dear {failure.customer_name}, your auto-pay mandate for {failure.plan_name} was cancelled. "
-                       f"Re-authorize or pay here: {payment_link}.{discount_text}")
+                msg = (f"Dear {failure.customer_name}, your auto-pay mandate for {failure.plan_name} was revoked. "
+                       f"Re-authorize or pay here: {payment_link}. Self-serve portal: {portal_link}.{discount_text}")
             else:
                 msg = (f"Hi {failure.customer_name}, aapka {failure.plan_name} auto-pay mandate cancel ho gaya hai. "
-                       f"Service continue rakhne ke liye dobara authorize karein ya is link se pay karein: {payment_link}.{discount_text}")
+                       f"Service continue rakhne ke liye dobara authorize karein: {payment_link}. Sub portal: {portal_link}.{discount_text}")
             subject = f"Action Required: Re-authorize your subscription for {failure.plan_name}"
 
         elif f_class == "HARD_UPI_CAP_EXCEEDED":
@@ -141,10 +141,10 @@ class RecoveryOrchestrator:
             channel = "WHATSAPP"
             if tone == "FORMAL_ENGLISH":
                 msg = (f"Dear {failure.customer_name}, your payment of ₹{failure.plan_amount:.0f} exceeds the RBI UPI AutoPay limit (₹15,000). "
-                       f"Please pay via Credit Card or NetBanking: {payment_link}.{discount_text}")
+                       f"Pay via Credit Card/NetBanking: {payment_link}. Billing Portal: {portal_link}.{discount_text}")
             else:
                 msg = (f"Hi {failure.customer_name}! ₹{failure.plan_amount:.0f} ki payment UPI se nahi ho sakti "
-                       f"(RBI limit ₹15,000 hai). Card ya NetBanking se pay karein: {payment_link}.{discount_text} ✅")
+                       f"(RBI limit ₹15,000). Card/NetBanking se pay karein: {payment_link}. Portal & GST: {portal_link}.{discount_text}")
             subject = None
 
         elif f_class == "HARD_FRAUD_FLAGGED":

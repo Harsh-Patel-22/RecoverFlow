@@ -23,12 +23,17 @@ By pairing deterministic business rules for clear error codes with **Claude `cla
 
 ---
 
-## Key Enterprise Features (v2.0 Upgrade)
+## Key Enterprise Features (v2.0 & v3.0 Merchant Suite)
 
 - **⚡ Webhook Sandbox Drawer ("Simulate 1 Event")**: Test isolated real-time failure scenarios (`HARD_EXPIRED_CARD`, `HARD_UPI_CAP_EXCEEDED`, etc.) in 1 click and observe real-time intake in < 200ms.
 - **⚙️ Campaign & Dunning Settings**: Customize recovery messaging tone (*Hinglish Conversational* vs *Formal English B2B*) and toggle 1-click dynamic **Discount Incentives** (*0%, 5%, 10%, 15% OFF*) automatically appended to checkout links.
 - **⭐️ VIP Account Routing & CSM Escalation**: High-value contracts ($\ge$ ₹20,000) or ambiguous declines are flagged with a **`★ VIP`** badge and an interactive **"Assign to CSM"** button for direct manual outreach.
 - **🌊 Omnichannel Escalation Waterfall**: Visual step-by-step timeline visualizer showing the exact escalation schedule (*T+0h WhatsApp → T+24h Email → Salary Day Auto-Debit Retry*).
+- **🔒 Smart Grace Period & Entitlement Throttling (`/entitlements/[id]`)**: 3-Tier access lifecycle (Days 1–3 `GRACE_PERIOD`, Days 4–7 `RESTRICTED_READ_ONLY`, Day 8+ `HARD_LOCKED`) with live SaaS app in-app warning banners.
+- **📄 Customer Self-Serve Mandate Portal (`/portal/[id]`)**: White-labeled customer portal for subscribers to view decline explanations, 1-click re-authorize Razorpay e-mandates, update cards, and download GST tax invoices.
+- **💬 Real-Time Slack Revenue Alerts**: Webhook alerts (`🟢 [RECOVERED]` and `🔴 [VIP DECLINE]`) dispatched directly into `#finance-alerts` Slack channels.
+- **💳 Adaptive Down-sell Recovery**: High-ticket annual plans ($\ge$ ₹15,000) automatically present a 1-tap down-sell fallback (*"Switch to Monthly billing at ₹2,499/mo"*).
+- **📑 Indian B2B GSTIN & Tax Invoice Generator**: Generates 100% GST-compliant B2B invoices (SAC Code `998313`, 18% CGST/SGST/IGST breakdown, 15-digit GSTIN ITC claim compliance).
 
 ---
 

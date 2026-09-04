@@ -108,17 +108,27 @@ async def razorpay_checkout_page(amt: float, customer: str = "Customer", plan: s
             color: #38BDF8;
             margin: 12px 0;
         }}
+        .downsell-box {{
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px dashed rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            color: #10B981;
+            font-size: 12px;
+            font-weight: 600;
+        }}
         .btn {{
             background: #0066FF;
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 14px;
+            color: white;
             border: none;
-            padding: 14px 28px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 700;
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
-            margin-top: 20px;
+            margin-top: 16px;
             transition: background 0.2s;
         }}
         .btn:hover {{
@@ -148,7 +158,16 @@ async def razorpay_checkout_page(amt: float, customer: str = "Customer", plan: s
         <h2 style="margin: 16px 0 4px; font-size: 20px;">{plan}</h2>
         <p style="color: #94A3B8; font-size: 13px; margin: 0;">Customer: {customer}</p>
         <div class="amount">₹{amt:,.2f}</div>
+
+        {f"<div class='downsell-box'>💡 <strong>Adaptive Recovery Down-sell:</strong><br/>Can't pay ₹{amt:,.0f} today? <a href='/checkout?amt=2499&customer={customer}&plan=Pro+Monthly+Downsell&sub={sub}' style='color:#34D399; font-weight:800; text-decoration:underline;'>Switch to Monthly at ₹2,499/mo</a></div>" if amt >= 15000 else ""}
+
+        <div style="margin-top: 16px; text-align: left;">
+            <label style="font-size: 11px; color: #94A3B8; font-weight: 700; text-transform: uppercase;">Customer GSTIN (For B2B Tax Credit):</label>
+            <input type="text" id="gstin-input" value="27AAACB1234C1Z5" style="width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 12px; background: #0F172A; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 12px; font-family: monospace;" />
+        </div>
+
         <button id="pay-btn" class="btn">Pay Now via Razorpay</button>
+        <a id="gst-link" href="/invoices/{sub}/gst-invoice" target="_blank" style="display: block; margin-top: 12px; color: #64748B; font-size: 12px; text-decoration: underline;">Download B2B GST Tax Invoice (18% IGST)</a>
     </div>
 
     <script>
@@ -174,16 +193,21 @@ async def razorpay_checkout_page(amt: float, customer: str = "Customer", plan: s
             rzp1.open();
             e.preventDefault();
         }}
-        // Auto open on load
-        window.onload = function() {{
-            rzp1.open();
-        }};
     </script>
 </body>
 </html>"""
     return HTMLResponse(content=html_content)
 
-from routers import webhooks_router, batch_router, subscriptions_router, metrics_router, settings_router
+from routers import (
+    webhooks_router,
+    batch_router,
+    subscriptions_router,
+    metrics_router,
+    settings_router,
+    entitlements_router,
+    portal_router,
+    invoices_router
+)
 
 # Include Routers
 app.include_router(webhooks_router)
@@ -191,6 +215,9 @@ app.include_router(batch_router)
 app.include_router(subscriptions_router)
 app.include_router(metrics_router)
 app.include_router(settings_router)
+app.include_router(entitlements_router)
+app.include_router(portal_router)
+app.include_router(invoices_router)
 
 if __name__ == "__main__":
     import uvicorn
