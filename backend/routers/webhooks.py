@@ -59,7 +59,41 @@ async def handle_razorpay_webhook(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    # Idempotency / Replay Attack Guard via Redis
+    event_id = payload_dict.get("event_id") or request.headers.get("X-Razorpay-Event-Id")
+    if event_id:
+        from services.redis_client import redis_service
+        is_new = await redis_service.check_and_set_idempotency(event_id=event_id, ttl_seconds=86400)
+        if not is_new:
+            return {"status": "duplicate_ignored", "event_id": event_id}
+
     event_type = payload_dict.get("event")
+    
+    # Handle payment success / completion webhooks
+    if event_type in ["payment.captured", "subscription.charged"]:
+        sub_entity = payload_dict.get("payload", {}).get("subscription", {}).get("entity", {})
+        sub_id = sub_entity.get("id")
+        if sub_id:
+            from sqlalchemy import select, update
+            from models.recovery_action import RecoveryAction
+            from models.subscription_failure import SubscriptionFailure
+            
+            await db.execute(
+                update(SubscriptionFailure)
+                .where(SubscriptionFailure.subscription_id == sub_id)
+                .values(subscription_status="active")
+            )
+            await db.execute(
+                update(RecoveryAction)
+                .where(RecoveryAction.failure_id.in_(
+                    select(SubscriptionFailure.id).where(SubscriptionFailure.subscription_id == sub_id)
+                ))
+                .values(status="COMPLETED")
+            )
+            await db.commit()
+            return {"status": "success_processed", "subscription_id": sub_id}
+        return {"status": "success_received"}
+
     if event_type not in ["subscription.pending", "subscription.halted"]:
         return {"status": "ignored", "message": f"Event {event_type} ignored"}
 
