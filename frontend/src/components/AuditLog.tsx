@@ -107,22 +107,80 @@ export default function AuditLogComponent({ logs }: { logs: AuditLogEntry[] }) {
                       </td>
                     </tr>
 
-                    {/* Expandable JSON Detail Row */}
+                    {/* Expandable Intuitive Detail Row */}
                     {isExpanded && (
-                      <tr key={`detail-${log.id}`} className="bg-slate-900 text-white">
-                        <td colSpan={6} className="p-4">
-                          <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-xs text-emerald-400 space-y-2">
-                            <div className="text-slate-400 font-bold uppercase text-[10px] tracking-wider mb-2">
-                              Event Detail Payload (JSON)
+                      <tr key={`detail-${log.id}`} className="bg-slate-900/95 text-slate-100">
+                        <td colSpan={6} className="p-5">
+                          <div className="bg-[#0B1528] p-5 rounded-xl border border-slate-800 space-y-4">
+                            {/* Header info */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Event ID:</span>
+                                <span className="font-mono text-xs text-blue-400 font-bold">{log.id}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-slate-400">Actor: <strong className="text-white">{log.actor}</strong></span>
+                                <span className="text-slate-400">Time: <strong className="text-slate-200">{formatIST(log.event_timestamp)}</strong></span>
+                              </div>
                             </div>
-                            <pre className="overflow-x-auto whitespace-pre-wrap">
-                              {JSON.stringify(log.event_detail, null, 2)}
-                            </pre>
+
+                            {/* Agent Reasoning Banner if available */}
                             {log.agent_reasoning && (
-                              <div className="mt-3 pt-3 border-t border-slate-800 text-purple-300 font-sans">
-                                <strong>Agent Reasoning:</strong> {log.agent_reasoning}
+                              <div className="p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-lg text-xs text-purple-200 flex items-start gap-2.5">
+                                <Cpu className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <div className="font-extrabold text-purple-300 uppercase text-[10px] tracking-wider mb-0.5">
+                                    AI Agent Reasoning & Strategy
+                                  </div>
+                                  <p className="leading-relaxed text-purple-100">{log.agent_reasoning}</p>
+                                </div>
                               </div>
                             )}
+
+                            {/* Intuitive Key-Value Visual Grid */}
+                            <div>
+                              <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mb-2.5">
+                                Executive Event Summary
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                                {Object.entries(log.event_detail || {}).map(([key, val]) => {
+                                  let valStr = "";
+                                  if (typeof val === "object" && val !== null) {
+                                    valStr = JSON.stringify(val);
+                                  } else {
+                                    valStr = String(val);
+                                  }
+
+                                  const isLink = valStr.startsWith("http://") || valStr.startsWith("https://");
+
+                                  return (
+                                    <div
+                                      key={key}
+                                      className="p-3 bg-slate-900/80 border border-slate-800 rounded-lg space-y-1"
+                                    >
+                                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                        {key.replace(/_/g, " ")}
+                                      </div>
+                                      {isLink ? (
+                                        <a
+                                          href={valStr}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-blue-400 font-mono text-xs underline truncate block hover:text-blue-300"
+                                        >
+                                          {valStr}
+                                        </a>
+                                      ) : (
+                                        <div className="font-semibold text-slate-200 font-mono text-xs break-words">
+                                          {valStr}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           </div>
                         </td>
                       </tr>

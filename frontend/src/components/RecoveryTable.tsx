@@ -8,10 +8,16 @@ import { assignToCSM } from "@/lib/api";
 import { WaterfallModal } from "./WaterfallModal";
 
 export default function RecoveryTable({ items }: { items: FailingSubscriptionItem[] }) {
-  const displayItems = items.slice(0, 20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(20);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedWaterfall, setSelectedWaterfall] = useState<FailingSubscriptionItem | null>(null);
   const [csmAssignedIds, setCsmAssignedIds] = useState<Record<string, boolean>>({});
+
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const validPage = Math.min(currentPage, totalPages);
+  const startIndex = (validPage - 1) * pageSize;
+  const displayItems = items.slice(startIndex, startIndex + pageSize);
 
   const handleCopyLink = (id: string, link: string) => {
     navigator.clipboard.writeText(link);
@@ -141,18 +147,38 @@ export default function RecoveryTable({ items }: { items: FailingSubscriptionIte
     <>
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Table Header Controls */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+        <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
           <div>
             <h3 className="font-bold text-slate-900 text-sm">Failing Subscriptions Queue</h3>
             <p className="text-xs text-slate-500">Live Razorpay webhook failures processed by RecoverFlow AI Agent</p>
           </div>
-          <Link
-            href="/audit"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0066FF] hover:text-[#0052CC] transition-colors"
-          >
-            <span>View Full Audit Trail</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <span>Show:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            <Link
+              href="/audit"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0066FF] hover:text-[#0052CC] transition-colors"
+            >
+              <span>View Full Audit Trail</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -325,6 +351,37 @@ export default function RecoveryTable({ items }: { items: FailingSubscriptionIte
             </tbody>
           </table>
         </div>
+
+        {/* Footer Pagination Controls */}
+        {items.length > 0 && (
+          <div className="px-6 py-3 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-600 font-medium">
+            <div>
+              Showing <strong className="text-slate-900">{startIndex + 1}</strong> to{" "}
+              <strong className="text-slate-900">{Math.min(startIndex + pageSize, items.length)}</strong> of{" "}
+              <strong className="text-slate-900">{items.length}</strong> subscriptions
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                disabled={validPage <= 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 font-bold hover:bg-slate-100 disabled:opacity-40 transition-all"
+              >
+                Previous
+              </button>
+              <span className="font-mono text-slate-700">
+                Page <strong>{validPage}</strong> of <strong>{totalPages}</strong>
+              </span>
+              <button
+                disabled={validPage >= totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 font-bold hover:bg-slate-100 disabled:opacity-40 transition-all"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Waterfall Modal */}
