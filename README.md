@@ -23,6 +23,63 @@ By pairing deterministic business rules for clear error codes with **Claude `cla
 
 ---
 
+## Ecosystem Placement & Architecture
+
+RecoverFlow is positioned as **Razorpay Smart Recovery Suite**—a native, turn-key AI recovery plugin for the Razorpay Subscriptions ecosystem.
+
+```
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                            RAZORPAY ECOSYSTEM                             │
+ ├───────────────────────────────────────┬───────────────────────────────────┤
+ │        RAZORPAY CORE ENGINE           │      RECOVERFLOW AI SUITE         │
+ │                                       │                                   │
+ │  • Subscriptions & Mandates Engine    │  • Classifier Engine (Hybrid AI)  │
+ │  • Razorpay Webhooks Service ─────────┼──► Ingestion Pipeline (Webhook)   │
+ │  • Merchant Dashboard (RazorpayX)     │  • Smart Retry Scheduler          │
+ │  • Customer Database (Vault & CRM)    │  • RecoverFlow DB (State Machine) │
+ └───────────────────────────────────────┴───────────────────────────────────┘
+```
+
+### How RecoverFlow Integrates into Razorpay:
+* **Zero Database Migration for Merchants**: Merchants do not manage external DBs. RecoverFlow sits inside the merchant's RazorpayX dashboard as a 1-click extension.
+* **Operational State Machine DB**: The RecoverFlow DB tracks recovery campaign states, grace-period entitlement tiers, and compliance audit logs without replacing Razorpay's core ledger.
+* **Native Contact Ingestion**: Customer email, phone number (`+91`), and subscription details are automatically extracted from Razorpay `subscription.halted` webhook payloads — requiring zero manual customer data imports.
+
+---
+
+## AI vs. Rule Engine Justification
+
+RecoverFlow utilizes a **Hybrid Dual-Engine Architecture** to achieve high performance, cost efficiency, and maximum recovery throughput.
+
+1. **Deterministic Rule Engine (High Velocity / 95%+ of Failures)**:
+   - Evaluates standard bank failure codes (`HARD_EXPIRED_CARD`, `HARD_MANDATE_CANCELLED`, `HARD_UPI_CAP_EXCEEDED`) in `< 1ms` at ₹0 cost with 100% auditable predictability.
+2. **AI Classifier Engine (Claude `claude-sonnet-4-6` for Ambiguity & Personalization)**:
+   - **Error Disambiguation**: Ingests raw, unstructured bank decline strings (`transaction_decline_99`, `do_not_honor`) from 100+ Indian issuing banks to infer the true failure root cause.
+   - **Dynamic Messaging & Tone**: Formulates tailored Hinglish/English recovery notices, adjusts discount incentives (0%–15%), and handles VIP contract escalations (> ₹20k).
+   - **Smart Retry Timing**: Calculates salary-cycle retry windows (28th / 1st) and excludes incompatible payment methods (e.g. stripping UPI for debits > ₹15,000).
+
+---
+
+## Data Flow & Notification Delivery
+
+```
+[Customer Subscription Failure]
+             │
+             ▼
+[Razorpay Webhook Event: subscription.halted] ──► (Contains customer name, email, phone & sub_id)
+             │
+             ▼
+[RecoverFlow AI Engine] ──► (Classifies failure, calculates salary timing & dynamic discount)
+             │
+             ▼
+[Omnichannel Recovery Notice] ──► WhatsApp Deep Link (wa.me) & Email
+             │
+             ▼
+[Customer Billing Portal / Razorpay Checkout] ──► Self-serve e-mandate re-authorization & GST invoice
+```
+
+---
+
 ## Key Enterprise Features (v2.0 & v3.0 Merchant Suite)
 
 - **⚡ Webhook Sandbox Drawer ("Simulate 1 Event")**: Test isolated real-time failure scenarios (`HARD_EXPIRED_CARD`, `HARD_UPI_CAP_EXCEEDED`, etc.) in 1 click and observe real-time intake in < 200ms.
@@ -34,56 +91,6 @@ By pairing deterministic business rules for clear error codes with **Claude `cla
 - **💬 Real-Time Slack Revenue Alerts**: Webhook alerts (`🟢 [RECOVERED]` and `🔴 [VIP DECLINE]`) dispatched directly into `#finance-alerts` Slack channels.
 - **💳 Adaptive Down-sell Recovery**: High-ticket annual plans ($\ge$ ₹15,000) automatically present a 1-tap down-sell fallback (*"Switch to Monthly billing at ₹2,499/mo"*).
 - **📑 Indian B2B GSTIN & Tax Invoice Generator**: Generates 100% GST-compliant B2B invoices (SAC Code `998313`, 18% CGST/SGST/IGST breakdown, 15-digit GSTIN ITC claim compliance).
-
----
-
-## Architecture
-
-```
-                               ┌─────────────────────────────────────────┐
-                               │       Razorpay Test Mode Webhook        │
-                               └────────────────────┬────────────────────┘
-                                                    │ (HMAC-SHA256 Sig)
-                                                    ▼
-                               ┌─────────────────────────────────────────┐
-                               │            FastAPI Backend              │
-                               │        (webhooks/razorpay API)          │
-                               └────────────────────┬────────────────────┘
-                                                    │
-                                                    ▼
-                               ┌─────────────────────────────────────────┐
-                               │        Hybrid Classifier Engine         │
-                               │   Rule-Based Pass  │   Claude Sonnet    │
-                               │  (7 Deterministic) │  (Ambiguous Only)  │
-                               └────────────────────┬────────────────────┘
-                                                    │
-                                                    ▼
-                               ┌─────────────────────────────────────────┐
-                               │          Recovery Orchestrator          │
-                               │   Matrix Selection & Salary-Date Timing │
-                               └────────────────────┬────────────────────┘
-                                                    │
-                               ┌────────────────────┴────────────────────┐
-                               ▼                                         ▼
-                 ┌───────────────────────────┐             ┌───────────────────────────┐
-                 │    Razorpay SDK Client    │             │    Notification Engine    │
-                 │   Payment Link Creation   │             │   WhatsApp / Email Mock   │
-                 └─────────────┬─────────────┘             └─────────────┬─────────────┘
-                               │                                         │
-                               └────────────────────┬────────────────────┘
-                                                    │
-                                                    ▼
-                               ┌─────────────────────────────────────────┐
-                               │           Audit Logger (SQLite)         │
-                               │     Immutable Event & Reasoning Trail   │
-                               └────────────────────┬────────────────────┘
-                                                    │
-                                                    ▼
-                               ┌─────────────────────────────────────────┐
-                               │          Next.js 14 Dashboard           │
-                               │       (Real-Time Analytics & Logs)      │
-                               └─────────────────────────────────────────┘
-```
 
 ---
 
