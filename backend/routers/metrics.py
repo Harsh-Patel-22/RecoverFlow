@@ -17,8 +17,16 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+_metrics_cache = {"data": None, "timestamp": 0.0}
+
 @router.get("/metrics", response_model=MetricsResponse)
 async def get_metrics(db: AsyncSession = Depends(get_db)):
+    global _metrics_cache
+    now_ts = datetime.now(timezone.utc).timestamp()
+
+    if _metrics_cache["data"] is not None and (now_ts - _metrics_cache["timestamp"]) < 10:
+        return _metrics_cache["data"]
+
     stmt = select(SubscriptionFailure, RecoveryAction).join(
         RecoveryAction, SubscriptionFailure.id == RecoveryAction.failure_id
     )
@@ -56,7 +64,7 @@ async def get_metrics(db: AsyncSession = Depends(get_db)):
 
     recovery_rate = (mrr_recovered / mrr_at_risk * 100.0) if mrr_at_risk > 0 else 0.0
 
-    return MetricsResponse(
+    response_data = MetricsResponse(
         total_failures_processed=total_count,
         total_mrr_at_risk_rupees=round(mrr_at_risk, 2),
         total_mrr_recovered_rupees=round(mrr_recovered, 2),
@@ -67,6 +75,10 @@ async def get_metrics(db: AsyncSession = Depends(get_db)):
         classification_method_breakdown=classification_method_breakdown,
         channel_breakdown=channel_breakdown
     )
+
+    _metrics_cache["data"] = response_data
+    _metrics_cache["timestamp"] = now_ts
+    return response_data
 
 @router.get("/audit/all")
 async def get_all_audit_logs(limit: int = 100, db: AsyncSession = Depends(get_db)):

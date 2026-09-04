@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Float, Integer, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Float, Integer, Boolean, DateTime, ForeignKey, Index
 from database import Base
 
 def generate_uuid():
@@ -8,6 +8,10 @@ def generate_uuid():
 
 class RecoveryAction(Base):
     __tablename__ = "recovery_actions"
+    __table_args__ = (
+        Index("idx_action_failure_created", "failure_id", "created_at"),
+        Index("idx_action_status_created", "status", "created_at"),
+    )
 
     id = Column(String, primary_key=True, default=generate_uuid)
     failure_id = Column(String, ForeignKey("subscription_failures.id"), index=True, nullable=False)

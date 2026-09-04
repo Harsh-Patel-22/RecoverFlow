@@ -28,13 +28,10 @@ class BatchRunner:
     async def run_batch(self, count: int = 100) -> BatchResult:
         start_time = time.time()
         raw_records = synthetic_generator.generate_batch(count=count)
-
-        semaphore = asyncio.Semaphore(2)
-        agent_results = []
+        semaphore = asyncio.Semaphore(5)
 
         async def _process_single(rec: Dict[str, Any]):
             async with semaphore:
-                await asyncio.sleep(0.05)
                 async with AsyncSessionLocal() as session:
                     failure = SubscriptionFailure(**rec)
                     session.add(failure)
@@ -45,7 +42,7 @@ class BatchRunner:
                     return result
 
         tasks = [_process_single(rec) for rec in raw_records]
-        agent_results = await asyncio.gather(*tasks, return_exceptions=False)
+        agent_results = await asyncio.gather(*tasks)
 
         # Aggregate stats across batch
         total_processed = len(agent_results)
